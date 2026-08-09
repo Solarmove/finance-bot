@@ -15,7 +15,7 @@ class AbstractUnitOfWork(ABC):
     transactions: TransactionRepository
 
     @abstractmethod
-    async def __aenter__(self) -> "AbstractUnitOfWork": ...
+    async def __aenter__(self) -> AbstractUnitOfWork: ...
 
     @abstractmethod
     async def __aexit__(
@@ -36,7 +36,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self._session_factory = session_factory
 
-    async def __aenter__(self) -> "SqlAlchemyUnitOfWork":
+    async def __aenter__(self) -> SqlAlchemyUnitOfWork:
         self._session = self._session_factory()
         self.users = SqlAlchemyUserRepository(self._session)
         self.transactions = SqlAlchemyTransactionRepository(self._session)

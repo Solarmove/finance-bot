@@ -16,12 +16,18 @@ from redis.asyncio import Redis
 from app.api.handlers import router as api_router
 from app.application.services import FinanceService
 from app.application.uow import SqlAlchemyUnitOfWork
+from app.application.use_cases import RecordTelegramTransaction
+from app.bot.controllers import (
+    AccountController,
+    ReportController,
+    StaticController,
+    TransactionController,
+)
 from app.bot.handlers import router as bot_router
 from app.core.config import Settings
 from app.infrastructure.database import create_engine, create_session_factory
 from app.infrastructure.health import ReadinessChecker
 from app.infrastructure.notifications import TelegramTransactionNotifier
-from app.infrastructure.telegram import RichMessageSender
 
 logger = structlog.get_logger()
 
@@ -37,16 +43,27 @@ def create_application(settings: Settings) -> FastAPI:
     storage = RedisStorage(redis=redis)
     dispatcher = Dispatcher(storage=storage)
     dispatcher.include_router(bot_router)
-    dispatcher["finance_service"] = finance_service
-    dispatcher["settings"] = settings
     bot = Bot(
         token=settings.bot_token.get_secret_value(),
-        default=DefaultBotProperties(parse_mode=ParseMode.HTML, link_preview_is_disabled=True),
+        default=DefaultBotProperties(
+            parse_mode=ParseMode.MARKDOWN_V2,
+            link_preview_is_disabled=True,
+        ),
     )
-    rich_message_sender = RichMessageSender(bot)
-    transaction_notifier = TelegramTransactionNotifier(rich_message_sender)
+    record_telegram_transaction = RecordTelegramTransaction(finance_service)
+    transaction_notifier = TelegramTransactionNotifier(bot)
     readiness_checker = ReadinessChecker(engine, redis)
-    dispatcher["rich_message_sender"] = rich_message_sender
+    dispatcher["transaction_controller"] = TransactionController(
+        record_telegram_transaction,
+        settings.default_currency,
+    )
+    dispatcher["account_controller"] = AccountController(finance_service)
+    dispatcher["report_controller"] = ReportController(
+        finance_service,
+        settings.default_currency,
+        settings.app_timezone,
+    )
+    dispatcher["static_controller"] = StaticController()
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -85,9 +102,6 @@ def create_application(settings: Settings) -> FastAPI:
     )
     app.state.settings = settings
     app.state.finance_service = finance_service
-    app.state.bot = bot
-    app.state.engine = engine
-    app.state.redis = redis
     app.state.transaction_notifier = transaction_notifier
     app.state.readiness_checker = readiness_checker
     app.include_router(api_router)

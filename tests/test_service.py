@@ -4,9 +4,10 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from app.application.dto import CreateTransactionCommand
+from app.application.dto import CreateTransactionCommand, RecordTelegramTransactionCommand
 from app.application.services import FinanceService
 from app.application.uow import SqlAlchemyUnitOfWork
+from app.application.use_cases import RecordTelegramTransaction
 from app.domain.enums import TransactionKind, TransactionSource
 from app.infrastructure.database import create_session_factory
 from app.infrastructure.models import Base
@@ -65,3 +66,27 @@ async def test_idempotent_transaction_and_balance(service: FinanceService) -> No
     assert first.transaction.id == second.transaction.id
     assert balance.expense == Decimal("42.10")
     assert balance.net == Decimal("-42.10")
+
+
+async def test_record_telegram_transaction_use_case_owns_transport_mapping(
+    service: FinanceService,
+) -> None:
+    occurred_at = datetime(2026, 8, 9, 10, 30, tzinfo=UTC)
+    use_case = RecordTelegramTransaction(service, clock=lambda: occurred_at)
+
+    result = await use_case.execute(
+        RecordTelegramTransactionCommand(
+            telegram_user_id=1003,
+            username="bob",
+            first_name="Bob",
+            kind=TransactionKind.INCOME,
+            amount=Decimal("500.00"),
+            currency="PLN",
+            category="salary",
+            note="August",
+        )
+    )
+
+    assert result.transaction.occurred_at == occurred_at
+    assert result.transaction.source is TransactionSource.TELEGRAM
+    assert result.transaction.kind is TransactionKind.INCOME

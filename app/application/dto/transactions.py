@@ -35,6 +35,18 @@ class CreateTransactionCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class RecordTelegramTransactionCommand:
+    telegram_user_id: int
+    username: str | None
+    first_name: str | None
+    kind: TransactionKind
+    amount: Decimal
+    currency: str
+    category: str
+    note: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class CreateTransactionResult:
     transaction: TransactionDTO
     created: bool

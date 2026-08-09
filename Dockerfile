@@ -1,4 +1,4 @@
-FROM python:3.12-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -19,4 +19,3 @@ USER app
 EXPOSE 8080
 
 CMD ["sh", "-c", "alembic upgrade head && python -m app.main"]
-

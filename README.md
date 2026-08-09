@@ -2,7 +2,7 @@
 
 Telegram-бот для учёта расходов и доходов. Работает только через webhook, принимает расходы
 через JSON API на FastAPI и использует PostgreSQL, Redis, SQLAlchemy async, Pydantic и паттерн
-Unit of Work.
+Unit of Work. Runtime проекта — Python 3.14.
 
 ## Что умеет
 
@@ -16,10 +16,11 @@ Unit of Work.
 - идемпотентность API через обязательный `Idempotency-Key`;
 - liveness/readiness endpoints и структурированные JSON-логи.
 
-Бот использует Rich Messages из Bot API 10.2: нативные таблицы `<table bordered striped>`,
-заголовки, списки, сворачиваемые `<details>` и другие структурные блоки. Пока эти типы ещё не
-вошли в стабильный aiogram, метод `sendRichMessage` подключён через изолированный адаптер
-`TelegramMethod`; для несовместимого Bot API предусмотрен текстовый fallback.
+Бот использует Rich Markdown из Bot API 10.2 через нативные `InputRichMessage` и
+`Bot.send_rich_message()` из aiogram 3.30: GFM-таблицы, заголовки, списки, цитаты и
+spoiler-разметку. В Telegram handlers используется нативный shortcut `Message.answer_rich()`.
+Если Telegram отклоняет rich-сообщение, бот автоматически повторяет отправку через обычный
+`Message.answer()` без `parse_mode`.
 
 ## Персональные API-ключи
 
@@ -106,7 +107,7 @@ app/
 │   ├── di/           # зависимости FastAPI: container, auth, headers
 │   └── dto/          # HTTP request/response DTO
 ├── application/      # use cases, contracts, Unit of Work и application DTO
-├── bot/              # aiogram handlers, parsing, DTO и Telegram formatting
+├── bot/              # тонкие aiogram routes, controllers, parsing, DTO и views
 ├── core/             # configuration and logging
 ├── domain/           # enums and domain vocabulary
 └── infrastructure/   # SQLAlchemy, repositories, notifier и readiness checker

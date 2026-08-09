@@ -5,6 +5,7 @@ from app.application.dto.reports import Balance
 from app.application.dto.transactions import (
     CreateTransactionCommand,
     CreateTransactionResult,
+    RecordTelegramTransactionCommand,
     TransactionDTO,
 )
 from app.application.dto.users import EnsureUserResult, UserDTO
@@ -15,6 +16,7 @@ __all__ = [
     "CreateTransactionResult",
     "EnsureUserResult",
     "ReadinessResult",
+    "RecordTelegramTransactionCommand",
     "TransactionDTO",
     "UserDTO",
 ]

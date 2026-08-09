@@ -1,5 +1,9 @@
-"""Telegram Bot API extensions not yet available in aiogram."""
+"""Telegram-specific infrastructure helpers."""
 
-from app.infrastructure.telegram.rich_messages import RichMessageSender
+from app.infrastructure.telegram.messages import (
+    answer_rich_or_plain,
+    rich_markdown_to_plain_text,
+    send_rich_or_plain,
+)
 
-__all__ = ["RichMessageSender"]
+__all__ = ["answer_rich_or_plain", "rich_markdown_to_plain_text", "send_rich_or_plain"]

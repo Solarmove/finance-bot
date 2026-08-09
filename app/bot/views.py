@@ -1,20 +1,19 @@
 from datetime import datetime
-from html import escape
 from zoneinfo import ZoneInfo
 
 from app.application.dto import Balance, TransactionDTO
 from app.bot.formatting import money
 from app.domain.enums import TransactionKind
+from app.infrastructure.telegram.markdown import escape_markdown, escape_table_cell
 
 
 def transaction_parse_error(message: str, command: str) -> str:
     return (
-        "<h3>⚠️ Не удалось записать операцию</h3>"
-        f"<p>{escape(message)}</p>"
-        "<details open><summary>Правильный формат</summary>"
-        f"<p><code>/{command} 125.50 продукты обед</code></p>"
-        "<footer>Сумму можно вводить через точку или запятую.</footer>"
-        "</details>"
+        "### ⚠️ Не удалось записать операцию\n\n"
+        f"{escape_markdown(message)}\n\n"
+        "#### Правильный формат\n\n"
+        f"`/{command} 125.50 продукты обед`\n\n"
+        "> Сумму можно вводить через точку или запятую."
     )
 
 
@@ -23,81 +22,68 @@ def transaction_created(transaction: TransactionDTO) -> str:
     title = "Расход записан" if is_expense else "Доход записан"
     icon = "📉" if is_expense else "📈"
     sign = "−" if is_expense else "+"
-    note_row = (
-        f'<tr><th align="left">Комментарий</th><td>{escape(transaction.note)}</td></tr>'
-        if transaction.note
-        else ""
-    )
+    rows = [
+        f"| **Сумма** | **{sign}{transaction.amount:.2f} {transaction.currency}** |",
+        f"| **Категория** | {escape_table_cell(transaction.category)} |",
+    ]
+    if transaction.note:
+        rows.append(f"| **Комментарий** | {escape_table_cell(transaction.note)} |")
     return (
-        f"<h2>{icon} {title}</h2>"
-        "<table bordered>"
-        f'<tr><th align="left">Сумма</th><td align="right"><b>{sign}'
-        f"{transaction.amount:.2f} {transaction.currency}</b></td></tr>"
-        f'<tr><th align="left">Категория</th><td>{escape(transaction.category)}</td></tr>'
-        f"{note_row}"
-        "</table>"
-        "<footer>Операция учтена в текущем балансе.</footer>"
+        f"## {icon} {title}\n\n"
+        "| | |\n"
+        "|:--|--:|\n"
+        f"{'\n'.join(rows)}\n\n"
+        "_Операция учтена в текущем балансе._"
     )
 
 
 def welcome(api_key: str | None, can_show_key: bool) -> str:
-    api_section: str
     if api_key and can_show_key:
         api_section = (
-            "<details><summary>🔐 Ваш ключ для HTTP API</summary>"
-            "<p>Сохраните его сейчас — в базе хранится только хеш.</p>"
-            f"<p><tg-spoiler><code>{api_key}</code></tg-spoiler></p>"
-            "</details>"
+            "### 🔐 Ключ для HTTP API\n\n"
+            "Сохраните его сейчас — в базе хранится только хеш.\n\n"
+            f"||`{api_key}`||"
         )
     elif api_key:
-        api_section = (
-            "<p>🔐 Получить ключ для HTTP API можно командой "
-            "<code>/api_key</code> в личном чате.</p>"
-        )
+        api_section = "### 🔐 HTTP API\n\nПолучить ключ можно командой `/api_key` в личном чате."
     else:
-        api_section = "<p>🔐 Управление ключом для HTTP API: <code>/api_key</code>.</p>"
+        api_section = "### 🔐 HTTP API\n\nУправление персональным ключом: `/api_key`."
 
     return (
-        "<h1>💰 Личные финансы</h1>"
-        "<p>Доходы и расходы — без сложных форм и лишних экранов.</p>"
-        "<hr/>"
-        "<h3>Быстрый старт</h3>"
-        "<ol>"
-        "<li>Расход: <code>/expense 420 транспорт такси</code></li>"
-        "<li>Доход: <code>/income 85000 зарплата август</code></li>"
-        "<li>Итоги месяца: <code>/balance</code></li>"
-        "</ol>"
-        f"{api_section}"
-        "<footer>Все операции сохраняются в PostgreSQL.</footer>"
+        "# 💰 Личные финансы\n\n"
+        "Доходы и расходы — без сложных форм и лишних экранов.\n\n"
+        "---\n\n"
+        "### Быстрый старт\n\n"
+        "1. Расход: `/expense 420 транспорт такси`\n"
+        "2. Доход: `/income 85000 зарплата август`\n"
+        "3. Итоги месяца: `/balance`\n\n"
+        f"{api_section}\n\n"
+        "_Все операции сохраняются в PostgreSQL._"
     )
 
 
 def help_message() -> str:
     return (
-        "<h1>🧭 Возможности</h1>"
-        "<table bordered striped>"
-        "<tr><th>Команда</th><th>Что делает</th></tr>"
-        "<tr><td><code>/expense</code></td><td>Добавляет расход</td></tr>"
-        "<tr><td><code>/income</code></td><td>Добавляет доход</td></tr>"
-        "<tr><td><code>/balance</code></td><td>Показывает итог месяца</td></tr>"
-        "<tr><td><code>/history</code></td><td>Открывает историю операций</td></tr>"
-        "<tr><td><code>/api_key</code></td><td>Перевыпускает API-ключ</td></tr>"
-        "</table>"
-        "<details><summary>Примеры операций</summary>"
-        "<ul>"
-        "<li><code>/expense 89.90 продукты кофе</code></li>"
-        "<li><code>/income 1500 фриланс логотип</code></li>"
-        "</ul>"
-        "<p>Комментарий после категории необязателен.</p>"
-        "</details>"
+        "# 🧭 Возможности\n\n"
+        "| Команда | Что делает |\n"
+        "|:--|:--|\n"
+        "| `/expense` | Добавляет расход |\n"
+        "| `/income` | Добавляет доход |\n"
+        "| `/balance` | Показывает итог месяца |\n"
+        "| `/history` | Открывает историю операций |\n"
+        "| `/api_key` | Перевыпускает API-ключ |\n\n"
+        "### Примеры\n\n"
+        "- `/expense 89.90 продукты кофе`\n"
+        "- `/income 1500 фриланс логотип`\n\n"
+        "> Комментарий после категории необязателен."
     )
 
 
 def api_key_private_only() -> str:
     return (
-        "<h3>🔒 Нужен личный чат</h3>"
-        "<p>API-ключ содержит доступ к вашим финансовым операциям, поэтому бот выдаёт его "
-        "только в личном диалоге.</p>"
+        "### 🔒 Нужен личный чат\n\n"
+        "API-ключ открывает доступ к вашим финансовым операциям, поэтому бот выдаёт его "
+        "только в личном диалоге."
     )
 
 
@@ -108,26 +94,23 @@ def api_key_created(api_key: str, is_rotation: bool) -> str:
         else "Сохраните ключ сейчас — повторно он не показывается."
     )
     return (
-        "<h2>🔐 Новый API-ключ</h2>"
-        f"<p>{explanation}</p>"
-        f"<blockquote><tg-spoiler><code>{api_key}</code></tg-spoiler></blockquote>"
-        "<footer>Передавайте ключ только в заголовке X-API-Key.</footer>"
+        "## 🔐 Новый API-ключ\n\n"
+        f"{explanation}\n\n"
+        f"> ||`{api_key}`||\n\n"
+        "_Передавайте ключ только в заголовке `X-API-Key`._"
     )
 
 
 def monthly_balance(summary: Balance, currency: str, now: datetime) -> str:
     net_icon = "🟢" if summary.net >= 0 else "🔴"
     return (
-        f"<h1>📊 Итоги за {now:%m.%Y}</h1>"
-        "<table bordered striped>"
-        '<tr><th align="left">Показатель</th><th align="right">Сумма</th></tr>'
-        '<tr><td>📈 Доходы</td><td align="right"><b>+'
-        f"{money(summary.income, currency)}</b></td></tr>"
-        f'<tr><td>📉 Расходы</td><td align="right">−{money(summary.expense, currency)}</td></tr>'
-        f'<tr><th align="left">{net_icon} Остаток</th>'
-        f'<th align="right">{money(summary.net, currency)}</th></tr>'
-        "</table>"
-        "<footer>Период: с первого дня месяца по текущий момент.</footer>"
+        f"# 📊 Итоги за {now:%m.%Y}\n\n"
+        "| Показатель | Сумма |\n"
+        "|:--|--:|\n"
+        f"| 📈 Доходы | **+{money(summary.income, currency)}** |\n"
+        f"| 📉 Расходы | −{money(summary.expense, currency)} |\n"
+        f"| **{net_icon} Остаток** | **{money(summary.net, currency)}** |\n\n"
+        "_Период: с первого дня месяца по текущий момент._"
     )
 
 
@@ -139,36 +122,28 @@ def transaction_history(transactions: list[TransactionDTO], timezone: ZoneInfo) 
         sign = "−" if is_expense else "+"
         local_time = transaction.occurred_at.astimezone(timezone)
         rows.append(
-            "<tr>"
-            f"<td>{local_time:%d.%m.%y}</td>"
-            f"<td>{operation}</td>"
-            f"<td>{escape(transaction.category)}</td>"
-            f'<td align="right"><b>{sign}{transaction.amount:.2f} '
-            f"{transaction.currency}</b></td>"
-            "</tr>"
+            f"| {local_time:%d.%m.%y} | {operation} | "
+            f"{escape_table_cell(transaction.category)} | "
+            f"**{sign}{transaction.amount:.2f} {transaction.currency}** |"
         )
     return (
-        "<h1>🧾 История операций</h1>"
-        "<table bordered striped>"
-        f"<caption>Последние {len(transactions)} операций</caption>"
-        '<tr><th>Дата</th><th>Тип</th><th>Категория</th><th align="right">Сумма</th></tr>'
-        f"{''.join(rows)}"
-        "</table>"
-        f"<footer>Часовой пояс: {escape(str(timezone))}</footer>"
+        "# 🧾 История операций\n\n"
+        f"_Последние {len(transactions)} операций_\n\n"
+        "| Дата | Тип | Категория | Сумма |\n"
+        "|:--|:--|:--|--:|\n"
+        f"{'\n'.join(rows)}\n\n"
+        f"> Часовой пояс: {escape_markdown(str(timezone))}"
     )
 
 
 def empty_history() -> str:
     return (
-        "<h2>🧾 История пока пуста</h2>"
-        "<p>Добавьте первую операцию:</p>"
-        "<ul><li><code>/expense 100 продукты</code></li>"
-        "<li><code>/income 1000 зарплата</code></li></ul>"
+        "## 🧾 История пока пуста\n\n"
+        "Добавьте первую операцию:\n\n"
+        "- `/expense 100 продукты`\n"
+        "- `/income 1000 зарплата`"
     )
 
 
 def unknown_message() -> str:
-    return (
-        "<h3>🤔 Не понял сообщение</h3>"
-        "<p>Отправьте <code>/help</code>, чтобы посмотреть команды и примеры.</p>"
-    )
+    return "### 🤔 Не понял сообщение\n\nОтправьте `/help`, чтобы посмотреть команды и примеры."

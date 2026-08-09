@@ -44,7 +44,7 @@ class User(TimestampMixin, Base):
     api_key_prefix: Mapped[str] = mapped_column(String(16), unique=True, nullable=False)
     api_key_hash: Mapped[str] = mapped_column(String(64), nullable=False)
 
-    transactions: Mapped[list["Transaction"]] = relationship(
+    transactions: Mapped[list[Transaction]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
