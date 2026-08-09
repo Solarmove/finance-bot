@@ -3,12 +3,12 @@ from html import escape
 from zoneinfo import ZoneInfo
 
 from aiogram import F, Router
-from aiogram.enums import ChatType
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 
 from app.application.dto import CreateTransactionCommand
 from app.application.services import FinanceService
+from app.bot.chat import is_private_chat
 from app.bot.formatting import money, transaction_table
 from app.bot.parsing import CommandParseError, parse_transaction_command
 from app.core.config import Settings
@@ -73,7 +73,7 @@ async def start(message: Message, finance_service: FinanceService) -> None:
         "ключом идемпотентности.</blockquote>\n"
         "Команда /help покажет все возможности."
     )
-    if registration.api_key and message.chat.type is ChatType.PRIVATE:
+    if registration.api_key and is_private_chat(message.chat.type):
         text += (
             "\n\n<b>Ваш API-ключ</b> — сохраните его, повторно он не показывается:\n"
             f"<tg-spoiler><code>{registration.api_key}</code></tg-spoiler>"
@@ -105,7 +105,7 @@ async def help_command(message: Message) -> None:
 async def rotate_api_key(message: Message, finance_service: FinanceService) -> None:
     if message.from_user is None:
         return
-    if message.chat.type is not ChatType.PRIVATE.value:
+    if not is_private_chat(message.chat.type):
         await message.answer("API-ключ можно получить только в личном чате с ботом.")
         return
     registration = await finance_service.ensure_user(
