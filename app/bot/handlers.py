@@ -105,7 +105,7 @@ async def help_command(message: Message) -> None:
 async def rotate_api_key(message: Message, finance_service: FinanceService) -> None:
     if message.from_user is None:
         return
-    if message.chat.type is not ChatType.PRIVATE:
+    if message.chat.type is not ChatType.PRIVATE.value:
         await message.answer("API-ключ можно получить только в личном чате с ботом.")
         return
     registration = await finance_service.ensure_user(
