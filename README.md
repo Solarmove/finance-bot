@@ -16,9 +16,10 @@ Unit of Work.
 - идемпотентность API через обязательный `Idempotency-Key`;
 - liveness/readiness endpoints и структурированные JSON-логи.
 
-У Telegram нет отдельной сущности «таблица». Бот использует актуальный HTML parse mode:
-`<pre>` для выровненных таблиц, `<blockquote expandable>` для сворачиваемых подсказок и
-`<tg-spoiler>` для однократной выдачи ключа.
+Бот использует Rich Messages из Bot API 10.2: нативные таблицы `<table bordered striped>`,
+заголовки, списки, сворачиваемые `<details>` и другие структурные блоки. Пока эти типы ещё не
+вошли в стабильный aiogram, метод `sendRichMessage` подключён через изолированный адаптер
+`TelegramMethod`; для несовместимого Bot API предусмотрен текстовый fallback.
 
 ## Персональные API-ключи
 

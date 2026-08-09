@@ -21,6 +21,7 @@ from app.core.config import Settings
 from app.infrastructure.database import create_engine, create_session_factory
 from app.infrastructure.health import ReadinessChecker
 from app.infrastructure.notifications import TelegramTransactionNotifier
+from app.infrastructure.telegram import RichMessageSender
 
 logger = structlog.get_logger()
 
@@ -42,8 +43,10 @@ def create_application(settings: Settings) -> FastAPI:
         token=settings.bot_token.get_secret_value(),
         default=DefaultBotProperties(parse_mode=ParseMode.HTML, link_preview_is_disabled=True),
     )
-    transaction_notifier = TelegramTransactionNotifier(bot)
+    rich_message_sender = RichMessageSender(bot)
+    transaction_notifier = TelegramTransactionNotifier(rich_message_sender)
     readiness_checker = ReadinessChecker(engine, redis)
+    dispatcher["rich_message_sender"] = rich_message_sender
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
