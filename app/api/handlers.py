@@ -34,7 +34,6 @@ router = APIRouter()
 )
 async def create_expense(
     payload: ExpenseCreate,
-    response: Response,
     user: CurrentUser,
     service: FinanceServiceDep,
     settings: SettingsDep,
@@ -55,7 +54,7 @@ async def create_expense(
             kind=TransactionKind.EXPENSE,
             amount=payload.amount,
             currency=payload.currency,
-            category=payload.category,
+            category=payload.category or "",
             note=payload.note,
             occurred_at=payload.occurred_at,
             source=TransactionSource.API,
@@ -66,8 +65,6 @@ async def create_expense(
     if payload.notify and result.created:
         await notifier.expense_created(user.telegram_user_id, result.transaction)
 
-    if not result.created:
-        response.status_code = status.HTTP_200_OK
     return ExpenseResponse(
         id=result.transaction.id,
         status="created" if result.created else "already_exists",

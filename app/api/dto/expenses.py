@@ -13,7 +13,7 @@ class ExpenseCreate(BaseModel):
 
     amount: Decimal = Field(gt=0, max_digits=18, decimal_places=2)
     currency: Currency = "PLN"
-    category: str = Field(min_length=1, max_length=64)
+    category: str | None = Field(min_length=0, max_length=64, default="Без категории")
     note: str | None = Field(default=None, max_length=500)
     occurred_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     notify: bool = False
